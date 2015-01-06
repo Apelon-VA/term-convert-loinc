@@ -46,11 +46,10 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
-import org.dwfa.cement.ArchitectonicAuxiliary;
-import org.dwfa.tapi.TerminologyException;
-import org.ihtsdo.etypes.EConcept;
-import org.ihtsdo.tk.binding.snomed.SnomedMetadataRf2;
-import org.ihtsdo.tk.dto.concept.component.relationship.TkRelationship;
+import org.ihtsdo.otf.tcc.api.coordinate.Status;
+import org.ihtsdo.otf.tcc.api.metadata.binding.Taxonomies;
+import org.ihtsdo.otf.tcc.dto.TtkConceptChronicle;
+import org.ihtsdo.otf.tcc.dto.component.relationship.TtkRelationshipChronicle;
 import com.apelon.akcds.loinc.propertyTypes.PT_Annotations;
 import com.apelon.akcds.loinc.propertyTypes.PT_ContentVersion;
 import com.apelon.akcds.loinc.propertyTypes.PT_Descriptions;
@@ -93,7 +92,7 @@ public class LoincToEConcepts extends ConverterBaseMojo
 
 	private final SimpleDateFormat sdf_ = new SimpleDateFormat("yyyyMMdd");
 
-	Hashtable<UUID, EConcept> concepts_ = new Hashtable<UUID, EConcept>();
+	Hashtable<UUID, TtkConceptChronicle> concepts_ = new Hashtable<UUID, TtkConceptChronicle>();
 
 	private NameMap classMapping_;
 	
@@ -143,6 +142,7 @@ public class LoincToEConcepts extends ConverterBaseMojo
 		propertyTypes_.add(pt_refsets_);
 	}
 
+	@Override
 	public void execute() throws MojoExecutionException
 	{
 		ConsoleUtil.println("LOINC Processing Begins " + new Date().toString());
@@ -279,7 +279,7 @@ public class LoincToEConcepts extends ConverterBaseMojo
 			ConsoleUtil.println("Loading Metadata");
 
 			// Set up a meta-data root concept
-			UUID archRoot = ArchitectonicAuxiliary.Concept.ARCHITECTONIC_ROOT_CONCEPT.getPrimoridalUid();
+			UUID archRoot = Taxonomies.WB_AUX.getUuids()[0];
 			UUID metaDataRoot = ConverterUUID.createNamespaceUUIDFromString("metadata");
 			conceptUtility_.createAndStoreMetaDataConcept(metaDataRoot, "LOINC Metadata", false, archRoot, dos_);
 
@@ -300,18 +300,18 @@ public class LoincToEConcepts extends ConverterBaseMojo
 			
 			if (sourceOrg != null)
 			{
-				EConcept sourceOrgConcept = conceptUtility_.createAndStoreMetaDataConcept("Source Organization", false, metaDataRoot, dos_);
+				TtkConceptChronicle sourceOrgConcept = conceptUtility_.createAndStoreMetaDataConcept("Source Organization", false, metaDataRoot, dos_);
 				String[] line = sourceOrg.readLine();
 				while (line != null)
 				{
 					//﻿"COPYRIGHT_ID","NAME","COPYRIGHT","TERMS_OF_USE","URL"
 					if (line.length > 0)
 					{
-						EConcept c = conceptUtility_.createConcept(line[0], sourceOrgConcept.getPrimordialUuid());
-						conceptUtility_.addDescription(c, line[1], DescriptionType.SYNONYM, true, propertyToPropertyType_.get("NAME").getProperty("NAME").getUUID(), null, false);
-						conceptUtility_.addStringAnnotation(c, line[2], propertyToPropertyType_.get("COPYRIGHT").getProperty("COPYRIGHT").getUUID(), false);
-						conceptUtility_.addStringAnnotation(c, line[3], propertyToPropertyType_.get("TERMS_OF_USE").getProperty("TERMS_OF_USE").getUUID(), false);
-						conceptUtility_.addStringAnnotation(c, line[4], propertyToPropertyType_.get("URL").getProperty("URL").getUUID(), false);
+						TtkConceptChronicle c = conceptUtility_.createConcept(line[0], sourceOrgConcept.getPrimordialUuid());
+						conceptUtility_.addDescription(c, line[1], DescriptionType.SYNONYM, true, propertyToPropertyType_.get("NAME").getProperty("NAME").getUUID(), null, Status.ACTIVE);
+						conceptUtility_.addStringAnnotation(c, line[2], propertyToPropertyType_.get("COPYRIGHT").getProperty("COPYRIGHT").getUUID(), Status.ACTIVE);
+						conceptUtility_.addStringAnnotation(c, line[3], propertyToPropertyType_.get("TERMS_OF_USE").getProperty("TERMS_OF_USE").getUUID(), Status.ACTIVE);
+						conceptUtility_.addStringAnnotation(c, line[4], propertyToPropertyType_.get("URL").getProperty("URL").getUUID(), Status.ACTIVE);
 						c.writeExternal(dos_);
 					}
 					line = sourceOrg.readLine();
@@ -319,7 +319,7 @@ public class LoincToEConcepts extends ConverterBaseMojo
 			}
 
 			// write this at the end
-			EConcept loincRefset = pt_refsets_.getConcept(PT_Refsets.Refsets.ALL.getProperty());
+			TtkConceptChronicle loincRefset = pt_refsets_.getConcept(PT_Refsets.Refsets.ALL.getProperty());
 
 			// The next line of the file is the header.
 			String[] headerFields = loincData.getHeader();
@@ -335,39 +335,39 @@ public class LoincToEConcepts extends ConverterBaseMojo
 			conceptUtility_.clearLoadStats();
 
 			// Root
-			EConcept rootConcept = conceptUtility_.createConcept("LOINC");
-			conceptUtility_.addDescription(rootConcept, "LOINC", DescriptionType.SYNONYM, true, null, null, false);
-			conceptUtility_.addDescription(rootConcept, "Logical Observation Identifiers Names and Codes", DescriptionType.SYNONYM, false, null, null, false);
+			TtkConceptChronicle rootConcept = conceptUtility_.createConcept("LOINC");
+			conceptUtility_.addDescription(rootConcept, "LOINC", DescriptionType.SYNONYM, true, null, null, Status.ACTIVE);
+			conceptUtility_.addDescription(rootConcept, "Logical Observation Identifiers Names and Codes", DescriptionType.SYNONYM, false, null, null, Status.ACTIVE);
 			ConsoleUtil.println("Root concept FSN is 'LOINC' and the UUID is " + rootConcept.getPrimordialUuid());
 
-			conceptUtility_.addStringAnnotation(rootConcept, version, contentVersion_.getProperty("Source Version").getUUID(), false);
-			conceptUtility_.addStringAnnotation(rootConcept, loincData.getReleaseDate(), contentVersion_.getProperty("Release Date").getUUID(), false);
-			conceptUtility_.addStringAnnotation(rootConcept, converterResultVersion, contentVersion_.RELEASE.getUUID(), false);
-			conceptUtility_.addStringAnnotation(rootConcept, loaderVersion, contentVersion_.LOADER_VERSION.getUUID(), false);
+			conceptUtility_.addStringAnnotation(rootConcept, version, contentVersion_.getProperty("Source Version").getUUID(), Status.ACTIVE);
+			conceptUtility_.addStringAnnotation(rootConcept, loincData.getReleaseDate(), contentVersion_.getProperty("Release Date").getUUID(), Status.ACTIVE);
+			conceptUtility_.addStringAnnotation(rootConcept, converterResultVersion, contentVersion_.RELEASE.getUUID(), Status.ACTIVE);
+			conceptUtility_.addStringAnnotation(rootConcept, loaderVersion, contentVersion_.LOADER_VERSION.getUUID(), Status.ACTIVE);
 
-			concepts_.put(rootConcept.primordialUuid, rootConcept);
+			concepts_.put(rootConcept.getPrimordialUuid(), rootConcept);
 
 			// Build up the Class metadata
 
-			EConcept classConcept = conceptUtility_.createConcept(pt_SkipClass_.getPropertyTypeUUID(), pt_SkipClass_.getPropertyTypeDescription(),
-					rootConcept.primordialUuid);
-			concepts_.put(classConcept.primordialUuid, classConcept);
+			TtkConceptChronicle classConcept = conceptUtility_.createConcept(pt_SkipClass_.getPropertyTypeUUID(), pt_SkipClass_.getPropertyTypeDescription(),
+					rootConcept.getPrimordialUuid());
+			concepts_.put(classConcept.getPrimordialUuid(), classConcept);
 
 			for (String property : pt_SkipClass_.getPropertyNames())
 			{
-				EConcept temp = conceptUtility_.createConcept(pt_SkipClass_.getProperty(property).getUUID(), property, classConcept.primordialUuid);
-				concepts_.put(temp.primordialUuid, temp);
+				TtkConceptChronicle temp = conceptUtility_.createConcept(pt_SkipClass_.getProperty(property).getUUID(), property, classConcept.getPrimordialUuid());
+				concepts_.put(temp.getPrimordialUuid(), temp);
 			}
 
 			// And the axis metadata
-			EConcept axisConcept = conceptUtility_.createConcept(pt_SkipAxis_.getPropertyTypeUUID(), pt_SkipAxis_.getPropertyTypeDescription(),
-					rootConcept.primordialUuid);
-			concepts_.put(axisConcept.primordialUuid, axisConcept);
+			TtkConceptChronicle axisConcept = conceptUtility_.createConcept(pt_SkipAxis_.getPropertyTypeUUID(), pt_SkipAxis_.getPropertyTypeDescription(),
+					rootConcept.getPrimordialUuid());
+			concepts_.put(axisConcept.getPrimordialUuid(), axisConcept);
 
 			for (String property : pt_SkipAxis_.getPropertyNames())
 			{
-				EConcept temp = conceptUtility_.createConcept(pt_SkipAxis_.getProperty(property).getUUID(), property, axisConcept.primordialUuid);
-				concepts_.put(temp.primordialUuid, temp);
+				TtkConceptChronicle temp = conceptUtility_.createConcept(pt_SkipAxis_.getProperty(property).getUUID(), property, axisConcept.getPrimordialUuid());
+				concepts_.put(temp.getPrimordialUuid(), temp);
 			}
 
 			// load the data
@@ -421,9 +421,9 @@ public class LoincToEConcepts extends ConverterBaseMojo
 			ConsoleUtil.println("Writing jbin file");
 
 			int conCounter = 0;
-			for (EConcept concept : concepts_.values())
+			for (TtkConceptChronicle concept : concepts_.values())
 			{
-				conceptUtility_.addRefsetMember(loincRefset, concept.getPrimordialUuid(), null, true, null);
+				conceptUtility_.addRefsetMember(loincRefset, concept.getPrimordialUuid(), null, Status.ACTIVE, null);
 				concept.writeExternal(dos_);
 				conCounter++;
 
@@ -486,7 +486,7 @@ public class LoincToEConcepts extends ConverterBaseMojo
 		}
 	}
 
-	private void processDataLine(String[] fields) throws ParseException, IOException, TerminologyException
+	private void processDataLine(String[] fields) throws ParseException, IOException
 	{
 		Integer index = fieldMap_.get("DT_LAST_CH");
 		if (index == null)
@@ -496,11 +496,11 @@ public class LoincToEConcepts extends ConverterBaseMojo
 		String lastChanged = fields[index];
 		long time = (StringUtils.isBlank(lastChanged) ? conceptUtility_.defaultTime_ : sdf_.parse(lastChanged).getTime());
 
-		UUID statusUUID = mapStatus(fields[fieldMap_.get("STATUS")]);
+		Status status = mapStatus(fields[fieldMap_.get("STATUS")]);
 
 		String code = fields[fieldMap_.get("LOINC_NUM")];
 
-		EConcept concept = conceptUtility_.createConcept(buildUUID(code), time, statusUUID);
+		TtkConceptChronicle concept = conceptUtility_.createConcept(buildUUID(code), time, status);
 		ArrayList<ValuePropertyPair> descriptions = new ArrayList<>();
 
 		for (int fieldIndex = 0; fieldIndex < fields.length; fieldIndex++)
@@ -537,12 +537,12 @@ public class LoincToEConcepts extends ConverterBaseMojo
 						}
 						for (String s : uniqueValues)
 						{
-							conceptUtility_.addStringAnnotation(concept, s, p.getUUID(), p.isDisabled());
+							conceptUtility_.addStringAnnotation(concept, s, p.getUUID(), (p.isDisabled() ? Status.INACTIVE : Status.ACTIVE));
 						}
 					}
 					else
 					{
-						conceptUtility_.addStringAnnotation(concept, fields[fieldIndex], p.getUUID(), p.isDisabled());
+						conceptUtility_.addStringAnnotation(concept, fields[fieldIndex], p.getUUID(), (p.isDisabled() ? Status.INACTIVE : Status.ACTIVE));
 					}
 				}
 				else if (pt instanceof PT_Descriptions)
@@ -552,7 +552,7 @@ public class LoincToEConcepts extends ConverterBaseMojo
 				}
 				else if (pt instanceof PT_IDs)
 				{
-					conceptUtility_.addAdditionalIds(concept, fields[fieldIndex], p.getUUID(), p.isDisabled());
+					conceptUtility_.addAdditionalIds(concept, fields[fieldIndex], p.getUUID(), (p.isDisabled() ? Status.INACTIVE : Status.ACTIVE));
 				}
 				else if (pt instanceof PT_SkipAxis)
 				{
@@ -560,12 +560,12 @@ public class LoincToEConcepts extends ConverterBaseMojo
 					UUID potential = ConverterUUID.createNamespaceUUIDFromString(pt_SkipAxis_.getPropertyTypeDescription() + ":" +
 							fieldMapInverse_.get(fieldIndex) + ":" + fields[fieldIndex], true);
 
-					EConcept axisConcept = concepts_.get(potential);
+					TtkConceptChronicle axisConcept = concepts_.get(potential);
 					if (axisConcept == null)
 					{
 						axisConcept = conceptUtility_.createConcept(potential, fields[fieldIndex]);
 						conceptUtility_.addRelationship(axisConcept, pt_SkipAxis_.getProperty(fieldMapInverse_.get(fieldIndex)).getUUID());
-						concepts_.put(axisConcept.primordialUuid, axisConcept);
+						concepts_.put(axisConcept.getPrimordialUuid(), axisConcept);
 					}
 					// We changed these from attributes to relations
 					// conceptUtility_.addAnnotation(concept, axisConcept, pt_SkipAxis_.getPropertyUUID(fieldMapInverse_.get(fieldIndex)));
@@ -579,17 +579,17 @@ public class LoincToEConcepts extends ConverterBaseMojo
 					UUID potential = ConverterUUID.createNamespaceUUIDFromString(pt_SkipClass_.getPropertyTypeDescription() + ":" +
 							fieldMapInverse_.get(fieldIndex) + ":" + fields[fieldIndex], true);
 
-					EConcept classConcept = concepts_.get(potential);
+					TtkConceptChronicle classConcept = concepts_.get(potential);
 					if (classConcept == null)
 					{
 						classConcept = conceptUtility_.createConcept(potential, classMapping_.getMatchValue(fields[fieldIndex]));
 						if (classMapping_.hasMatch(fields[fieldIndex]))
 						{
 							conceptUtility_.addAdditionalIds(classConcept, fields[fieldIndex], propertyToPropertyType_.get("ABBREVIATION").getProperty("ABBREVIATION")
-									.getUUID(), false);
+									.getUUID(), Status.ACTIVE);
 						}
 						conceptUtility_.addRelationship(classConcept, pt_SkipClass_.getProperty(fieldMapInverse_.get(fieldIndex)).getUUID());
-						concepts_.put(classConcept.primordialUuid, classConcept);
+						concepts_.put(classConcept.getPrimordialUuid(), classConcept);
 					}
 					// We changed these from attributes to relations
 					// conceptUtility_.addAnnotation(concept, classConcept, pt_SkipClass_.getPropertyUUID(fieldMapInverse_.get(fieldIndex)));
@@ -620,10 +620,10 @@ public class LoincToEConcepts extends ConverterBaseMojo
 			{
 				String target = mapping.getKey();
 				String comment = mapping.getValue();
-				TkRelationship r = conceptUtility_.addRelationship(concept, buildUUID(target), propertyToPropertyType_.get("MAP_TO").getProperty("MAP_TO"), null);
+				TtkRelationshipChronicle r = conceptUtility_.addRelationship(concept, buildUUID(target), propertyToPropertyType_.get("MAP_TO").getProperty("MAP_TO"), null);
 				if (comment != null && comment.length() > 0)
 				{
-					conceptUtility_.addStringAnnotation(r, comment, propertyToPropertyType_.get("COMMENT").getProperty("COMMENT").getUUID(), false);
+					conceptUtility_.addStringAnnotation(r, comment, propertyToPropertyType_.get("COMMENT").getProperty("COMMENT").getUUID(), Status.ACTIVE);
 				}
 			}
 		}
@@ -648,7 +648,7 @@ public class LoincToEConcepts extends ConverterBaseMojo
 			conceptUtility_.addDescriptions(concept, descriptions);
 		}
 
-		EConcept current = concepts_.put(concept.primordialUuid, concept);
+		TtkConceptChronicle current = concepts_.put(concept.getPrimordialUuid(), concept);
 		if (current != null)
 		{
 			ConsoleUtil.printErrorln("Duplicate LOINC code (LOINC_NUM):" + code);
@@ -681,19 +681,19 @@ public class LoincToEConcepts extends ConverterBaseMojo
 
 		UUID potential = buildUUID(code);
 
-		EConcept concept = concepts_.get(potential);
+		TtkConceptChronicle concept = concepts_.get(potential);
 		if (concept == null)
 		{
 			concept = conceptUtility_.createConcept(potential);
 			if (sequence != null && sequence.length() > 0)
 			{
-				conceptUtility_.addStringAnnotation(concept, sequence, propertyToPropertyType_.get("SEQUENCE").getProperty("SEQUENCE").getUUID(), false);
+				conceptUtility_.addStringAnnotation(concept, sequence, propertyToPropertyType_.get("SEQUENCE").getProperty("SEQUENCE").getUUID(), Status.ACTIVE);
 			}
 
 			if (immediateParentString != null && immediateParentString.length() > 0)
 			{
 				conceptUtility_.addStringAnnotation(concept, immediateParentString, propertyToPropertyType_.get("IMMEDIATE_PARENT").getProperty("IMMEDIATE_PARENT")
-						.getUUID(), false);
+						.getUUID(), Status.ACTIVE);
 			}
 
 			ValuePropertyPair vpp = new ValuePropertyPair(codeText, propertyToPropertyType_.get("CODE_TEXT").getProperty("CODE_TEXT"));
@@ -703,30 +703,30 @@ public class LoincToEConcepts extends ConverterBaseMojo
 
 			if (pathString != null && pathString.length() > 0)
 			{
-				conceptUtility_.addStringAnnotation(concept, pathString, propertyToPropertyType_.get("PATH_TO_ROOT").getProperty("PATH_TO_ROOT").getUUID(), false);
+				conceptUtility_.addStringAnnotation(concept, pathString, propertyToPropertyType_.get("PATH_TO_ROOT").getProperty("PATH_TO_ROOT").getUUID(), Status.ACTIVE);
 			}
-			conceptUtility_.addAdditionalIds(concept, code, propertyToPropertyType_.get("CODE").getProperty("CODE").getUUID(), false);
+			conceptUtility_.addAdditionalIds(concept, code, propertyToPropertyType_.get("CODE").getProperty("CODE").getUUID(), Status.ACTIVE);
 
-			concepts_.put(concept.primordialUuid, concept);
+			concepts_.put(concept.getPrimordialUuid(), concept);
 		}
 
 		// Make sure everything in pathToRoot is linked.
 		checkPath(concept, pathToRoot);
 	}
 
-	private void checkPath(EConcept concept, String[] pathToRoot)
+	private void checkPath(TtkConceptChronicle concept, String[] pathToRoot)
 	{
 		// The passed in concept should have a relation to the item at the end of the root list.
 		for (int i = (pathToRoot.length - 1); i >= 0; i--)
 		{
 			boolean found = false;
 			UUID target = buildUUID(pathToRoot[i]);
-			List<TkRelationship> rels = concept.getRelationships();
+			List<TtkRelationshipChronicle> rels = concept.getRelationships();
 			if (rels != null)
 			{
-				for (TkRelationship rel : rels)
+				for (TtkRelationshipChronicle rel : rels)
 				{
-					if (rel.getRelationshipSourceUuid().equals(concept.getPrimordialUuid()) && rel.getRelationshipTargetUuid().equals(target))
+					if (rel.getC1Uuid().equals(concept.getPrimordialUuid()) && rel.getC2Uuid().equals(target))
 					{
 						found = true;
 						break;
@@ -746,28 +746,20 @@ public class LoincToEConcepts extends ConverterBaseMojo
 		}
 	}
 
-	private UUID mapStatus(String status) throws IOException, TerminologyException
+	private Status mapStatus(String status) throws IOException
 	{
-		if (status.equals("ACTIVE"))
+		if (status.equals("ACTIVE") || status.equals("TRIAL") || status.equals("DISCOURAGED"))
 		{
-			return SnomedMetadataRf2.ACTIVE_VALUE_RF2.getUuids()[0];
-		}
-		else if (status.equals("TRIAL"))
-		{
-			return SnomedMetadataRf2.PENDING_MOVE_RF2.getUuids()[0];
-		}
-		else if (status.equals("DISCOURAGED"))
-		{
-			return SnomedMetadataRf2.CONCEPT_NON_CURRENT_RF2.getUuids()[0];
+			return Status.ACTIVE;
 		}
 		else if (status.equals("DEPRECATED"))
 		{
-			return SnomedMetadataRf2.OUTDATED_COMPONENT_RF2.getUuids()[0];
+			return Status.INACTIVE;
 		}
 		else
 		{
 			ConsoleUtil.printErrorln("No mapping for status: " + status);
-			return ArchitectonicAuxiliary.Concept.CURRENT.getPrimoridalUid();
+			return Status.ACTIVE;
 		}
 	}
 
