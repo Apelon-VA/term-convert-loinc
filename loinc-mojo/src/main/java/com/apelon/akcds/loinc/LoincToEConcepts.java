@@ -748,6 +748,7 @@ public class LoincToEConcepts extends ConverterBaseMojo
 
 	private Status mapStatus(String status) throws IOException
 	{
+		//TODO going to need to capture this as an attribute now - since WB only allows t/f
 		if (status.equals("ACTIVE") || status.equals("TRIAL") || status.equals("DISCOURAGED"))
 		{
 			return Status.ACTIVE;
