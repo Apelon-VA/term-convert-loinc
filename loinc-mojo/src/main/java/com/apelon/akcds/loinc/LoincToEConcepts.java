@@ -53,7 +53,6 @@ import org.ihtsdo.otf.tcc.dto.component.relationship.TtkRelationshipChronicle;
 import com.apelon.akcds.loinc.propertyTypes.PT_Annotations;
 import com.apelon.akcds.loinc.propertyTypes.PT_ContentVersion;
 import com.apelon.akcds.loinc.propertyTypes.PT_Descriptions;
-import com.apelon.akcds.loinc.propertyTypes.PT_IDs;
 import com.apelon.akcds.loinc.propertyTypes.PT_Refsets;
 import com.apelon.akcds.loinc.propertyTypes.PT_Relations;
 import com.apelon.akcds.loinc.propertyTypes.PT_SkipAxis;
@@ -106,6 +105,8 @@ public class LoincToEConcepts extends ConverterBaseMojo
 		LoincToEConcepts loincConverter = new LoincToEConcepts();
 		loincConverter.outputDirectory = new File("../loinc-econcept/target/");
 		loincConverter.inputFileLocation = new File("../loinc-econcept/target/generated-resources/src");
+		loincConverter.converterResultVersion = "foo";
+		loincConverter.loaderVersion = "foo";
 		loincConverter.execute();
 	}
 	
@@ -118,7 +119,6 @@ public class LoincToEConcepts extends ConverterBaseMojo
 	private void initProperties()
 	{
 		// Can't init these till we know the data version
-		propertyTypes_.add(new PT_IDs());
 		propertyTypes_.add(new PT_Annotations(annotationSkipList));
 		propertyTypes_.add(new PT_Descriptions());
 		propertyTypes_.add(pt_SkipAxis_);
@@ -281,7 +281,7 @@ public class LoincToEConcepts extends ConverterBaseMojo
 			// Set up a meta-data root concept
 			UUID archRoot = Taxonomies.WB_AUX.getUuids()[0];
 			UUID metaDataRoot = ConverterUUID.createNamespaceUUIDFromString("metadata");
-			conceptUtility_.createAndStoreMetaDataConcept(metaDataRoot, "LOINC Metadata", false, archRoot, dos_);
+			conceptUtility_.createAndStoreMetaDataConcept(metaDataRoot, "LOINC Metadata", archRoot, null, dos_);
 
 			conceptUtility_.loadMetaDataItems(propertyTypes_, metaDataRoot, dos_);
 
@@ -300,7 +300,7 @@ public class LoincToEConcepts extends ConverterBaseMojo
 			
 			if (sourceOrg != null)
 			{
-				TtkConceptChronicle sourceOrgConcept = conceptUtility_.createAndStoreMetaDataConcept("Source Organization", false, metaDataRoot, dos_);
+				TtkConceptChronicle sourceOrgConcept = conceptUtility_.createAndStoreMetaDataConcept("Source Organization", metaDataRoot, dos_);
 				String[] line = sourceOrg.readLine();
 				while (line != null)
 				{
@@ -423,7 +423,7 @@ public class LoincToEConcepts extends ConverterBaseMojo
 			int conCounter = 0;
 			for (TtkConceptChronicle concept : concepts_.values())
 			{
-				conceptUtility_.addRefsetMember(loincRefset, concept.getPrimordialUuid(), null, Status.ACTIVE, null);
+				conceptUtility_.addDynamicRefsetMember(loincRefset, concept.getPrimordialUuid(), null, Status.ACTIVE, null);
 				concept.writeExternal(dos_);
 				conCounter++;
 
@@ -550,10 +550,6 @@ public class LoincToEConcepts extends ConverterBaseMojo
 					//Gather for later
 					descriptions.add(new ValuePropertyPair(fields[fieldIndex], p));
 				}
-				else if (pt instanceof PT_IDs)
-				{
-					conceptUtility_.addAdditionalIds(concept, fields[fieldIndex], p.getUUID(), (p.isDisabled() ? Status.INACTIVE : Status.ACTIVE));
-				}
 				else if (pt instanceof PT_SkipAxis)
 				{
 					// See if this class object exists yet.
@@ -585,7 +581,7 @@ public class LoincToEConcepts extends ConverterBaseMojo
 						classConcept = conceptUtility_.createConcept(potential, classMapping_.getMatchValue(fields[fieldIndex]));
 						if (classMapping_.hasMatch(fields[fieldIndex]))
 						{
-							conceptUtility_.addAdditionalIds(classConcept, fields[fieldIndex], propertyToPropertyType_.get("ABBREVIATION").getProperty("ABBREVIATION")
+							conceptUtility_.addStringAnnotation(classConcept, fields[fieldIndex], propertyToPropertyType_.get("ABBREVIATION").getProperty("ABBREVIATION")
 									.getUUID(), Status.ACTIVE);
 						}
 						conceptUtility_.addRelationship(classConcept, pt_SkipClass_.getProperty(fieldMapInverse_.get(fieldIndex)).getUUID());
@@ -705,7 +701,7 @@ public class LoincToEConcepts extends ConverterBaseMojo
 			{
 				conceptUtility_.addStringAnnotation(concept, pathString, propertyToPropertyType_.get("PATH_TO_ROOT").getProperty("PATH_TO_ROOT").getUUID(), Status.ACTIVE);
 			}
-			conceptUtility_.addAdditionalIds(concept, code, propertyToPropertyType_.get("CODE").getProperty("CODE").getUUID(), Status.ACTIVE);
+			conceptUtility_.addStringAnnotation(concept, code, propertyToPropertyType_.get("CODE").getProperty("CODE").getUUID(), Status.ACTIVE);
 
 			concepts_.put(concept.getPrimordialUuid(), concept);
 		}
