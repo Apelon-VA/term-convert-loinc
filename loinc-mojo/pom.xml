@@ -4,7 +4,7 @@
 
 	<groupId>gov.va.oia.terminology.converters</groupId>
 	<artifactId>loinc-mojo</artifactId>
-	<version>3.2-SNAPSHOT</version>
+	<version>3.2</version>
 	
 	<name>LOINC Converter Mojo</name>
 	<packaging>maven-plugin</packaging>
