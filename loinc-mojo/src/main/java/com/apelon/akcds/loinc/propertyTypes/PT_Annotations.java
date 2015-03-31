@@ -91,5 +91,15 @@ public class PT_Annotations extends BPT_Annotations
 		
 		//From Map_TO
 		addProperty("COMMENT");
+		
+		//Things that used to be IDs below here
+		
+		addProperty("LOINC_NUM");
+		
+		//Abbrev Codes used by axis and class
+		addProperty("ABBREVIATION");
+		
+		//From multi-axial class
+		addProperty("CODE");
 	}
 }

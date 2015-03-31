@@ -4,14 +4,14 @@
 
 	<groupId>gov.va.oia.terminology.converters</groupId>
 	<artifactId>loinc-mojo</artifactId>
-	<version>3.1</version>
+	<version>3.2</version>
 	
 	<name>LOINC Converter Mojo</name>
 	<packaging>maven-plugin</packaging>
 	
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<convertersCommonCode.version>3.2</convertersCommonCode.version>
+		<convertersCommonCode.version>3.3</convertersCommonCode.version>
 	</properties>
 	
 	<scm>
